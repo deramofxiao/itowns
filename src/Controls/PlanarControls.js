@@ -14,6 +14,7 @@ const mouseButtons = {
     MIDDLECLICK: THREE.MOUSE.MIDDLE,
     RIGHTCLICK: THREE.MOUSE.RIGHT,
 };
+let currentPressedButton;
 
 // starting camera position and orientation target
 const startPosition = new THREE.Vector3();
@@ -32,6 +33,16 @@ export const STATE = {
     ROTATE: 2,
     TRAVEL: 3,
     ORTHO_ZOOM: 4,
+};
+
+// cursor shape linked to control state
+const cursor = {
+    default: 'auto',
+    drag: 'move',
+    pan: 'cell',
+    travel: 'wait',
+    rotate: 'move',
+    ortho_zoom: 'wait',
 };
 
 const vectorZero = new THREE.Vector3();
@@ -261,6 +272,7 @@ class PlanarControls extends THREE.EventDispatcher {
 
         // control state
         this.state = STATE.NONE;
+        this.cursor = cursor;
 
         if (this.view.controls) {
             // esLint-disable-next-line no-console
@@ -871,6 +883,7 @@ class PlanarControls extends THREE.EventDispatcher {
         this.view.domElement.addEventListener('keydown', this._handlerOnKeyDown, false);
         this.view.domElement.addEventListener('mousedown', this._handlerOnMouseDown, false);
         this.view.domElement.addEventListener('mouseup', this._handlerOnMouseUp, false);
+        this.view.domElement.addEventListener('mouseleave', this._handlerOnMouseUp, false);
         this.view.domElement.addEventListener('mousemove', this._handlerOnMouseMove, false);
         this.view.domElement.addEventListener('mousewheel', this._handlerOnMouseWheel, false);
         // focus policy
@@ -896,6 +909,7 @@ class PlanarControls extends THREE.EventDispatcher {
         this.view.domElement.removeEventListener('keydown', this._handlerOnKeyDown, true);
         this.view.domElement.removeEventListener('mousedown', this._handlerOnMouseDown, false);
         this.view.domElement.removeEventListener('mouseup', this._handlerOnMouseUp, false);
+        this.view.domElement.removeEventListener('mouseleave', this._handlerOnMouseUp, false);
         this.view.domElement.removeEventListener('mousemove', this._handlerOnMouseMove, false);
         this.view.domElement.removeEventListener('mousewheel', this._handlerOnMouseWheel, false);
         this.view.domElement.removeEventListener('mouseover', this._handlerFocusOnMouseOver, false);
@@ -913,20 +927,22 @@ class PlanarControls extends THREE.EventDispatcher {
     updateMouseCursorType() {
         switch (this.state) {
             case STATE.NONE:
-                this.view.domElement.style.cursor = 'auto';
+                this.view.domElement.style.cursor = this.cursor.default;
                 break;
             case STATE.DRAG:
-                this.view.domElement.style.cursor = 'move';
+                this.view.domElement.style.cursor = this.cursor.drag;
                 break;
             case STATE.PAN:
-                this.view.domElement.style.cursor = 'cell';
+                this.view.domElement.style.cursor = this.cursor.pan;
                 break;
             case STATE.TRAVEL:
+                this.view.domElement.style.cursor = this.cursor.travel;
+                break;
             case STATE.ORTHO_ZOOM:
-                this.view.domElement.style.cursor = 'wait';
+                this.view.domElement.style.cursor = this.cursor.ortho_zoom;
                 break;
             case STATE.ROTATE:
-                this.view.domElement.style.cursor = 'move';
+                this.view.domElement.style.cursor = this.cursor.rotate;
                 break;
             default:
                 break;
@@ -942,6 +958,18 @@ class PlanarControls extends THREE.EventDispatcher {
     }
 
     /**
+     * cursor modification for a specifique state.
+     *
+     * @param   {string} state   the state in which we want to change the cursor ('default', 'drag', 'pan', 'travel', 'rotate').
+     * @param   {string} newCursor   the css cursor we want to have for the specified state.
+     * @ignore
+     */
+    setCursor(state, newCursor) {
+        this.cursor[state] = newCursor;
+        this.updateMouseCursorType();
+    }
+
+    /**
      * Catch and manage the event when a touch on the mouse is downs.
      *
      * @param   {Event} event   the current event (mouse left or right button clicked, mouse wheel button actioned).
@@ -950,9 +978,10 @@ class PlanarControls extends THREE.EventDispatcher {
     onMouseDown(event) {
         event.preventDefault();
 
-        if (STATE.TRAVEL === this.state) {
+        if (STATE.NONE !== this.state) {
             return;
         }
+        currentPressedButton = event.button;
 
         this.updateMousePositionAndDelta(event);
 
@@ -992,7 +1021,7 @@ class PlanarControls extends THREE.EventDispatcher {
     onMouseUp(event) {
         event.preventDefault();
 
-        if (STATE.TRAVEL !== this.state) {
+        if (STATE.TRAVEL !== this.state && currentPressedButton === event.button) {
             this.state = STATE.NONE;
         }
 
@@ -1023,7 +1052,7 @@ class PlanarControls extends THREE.EventDispatcher {
      * @ignore
      */
     onKeyDown(event) {
-        if (STATE.TRAVEL === this.state) {
+        if (STATE.NONE !== this.state) {
             return;
         }
         switch (event.keyCode) {
