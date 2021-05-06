@@ -91,10 +91,6 @@ function vtFeatureToFeatureGeometry(vtFeature, feature, classify = false) {
     feature.updateExtent(geometry);
 }
 
-export function getStyle(styles, id, zoom) {
-    return styles[id].find(s => s.zoom.min <= zoom && s.zoom.max > zoom);
-}
-
 function readPBF(file, options) {
     options.out = options.out || {};
     const vectorTile = new VectorTile(new Protobuf(file));
@@ -114,10 +110,9 @@ function readPBF(file, options) {
 
     options.out.buildExtent = true;
     options.out.mergeFeatures = true;
-    options.out.withAltitude = false;
-    options.out.withNormal = false;
+    options.out.structure = '2d';
 
-    const collection = new FeatureCollection('EPSG:3857', options.out);
+    const collection = new FeatureCollection(options.out);
 
     const vFeature = vectorTile.layers[sourceLayers[0]];
     // TODO: verify if size is correct because is computed with only one feature (vFeature).
@@ -141,13 +136,13 @@ function readPBF(file, options) {
                     feature = collection.requestFeatureById(layer.id, vtFeature.type - 1);
                     feature.id = layer.id;
                     feature.order = layer.order;
-                    feature.style = getStyle(options.in.styles, feature.id, z);
+                    feature.style = options.in.styles[feature.id];
                     vtFeatureToFeatureGeometry(vtFeature, feature);
                 } else if (!collection.features.find(f => f.id === layer.id)) {
                     feature = collection.newFeatureByReference(feature);
                     feature.id = layer.id;
                     feature.order = layer.order;
-                    feature.style = getStyle(options.in.styles, feature.id, z);
+                    feature.style = options.in.styles[feature.id];
                 }
             }
         }

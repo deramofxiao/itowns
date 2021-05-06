@@ -11,7 +11,7 @@ proj4.defs('EPSG:3946',
     '+proj=lcc +lat_1=45.25 +lat_2=46.75 +lat_0=46 +lon_0=3 +x_0=1700000 +y_0=5200000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
 
 function parse(geojson) {
-    return GeoJsonParser.parse(geojson, { in: { crs: 'EPSG:3946' }, out: { crs: 'EPSG:3946', buildExtent: true } });
+    return GeoJsonParser.parse(geojson, { in: { crs: 'EPSG:3946' }, out: { crs: 'EPSG:3946', buildExtent: true, structure: '3d' } });
 }
 
 describe('GeoJsonParser', function () {
@@ -62,28 +62,17 @@ describe('GeoJsonParser', function () {
         }).then((collection) => {
             assert.ok(collection.features.length == 3);
         }));
-    it('should return an collection without altitude', () =>
+    it('should return an collection without altitude and normal', () =>
         GeoJsonParser.parse(holes, {
             in: {
                 crs: 'EPSG:3946',
             },
             out: {
                 crs: 'EPSG:3946',
-                withAltitude: false,
+                structure: '2d',
             },
         }).then((collection) => {
             assert.ok(collection.features[0].vertices.length == 32);
-        }));
-    it('should return an collection without normal', () =>
-        GeoJsonParser.parse(holes, {
-            in: {
-                crs: 'EPSG:3946',
-            },
-            out: {
-                crs: 'EPSG:3946',
-                withNormal: false,
-            },
-        }).then((collection) => {
             assert.ok(collection.features[0].normals == undefined);
         }));
 
